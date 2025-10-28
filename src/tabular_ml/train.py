@@ -194,7 +194,6 @@ def cross_validate(
                     else:
                         epochs_no_improve += 1
                     progress.update(1)
-                    progress.set_postfix({"fold": f"{fold_idx}/{config.cv_folds}", "rmse": f"{val_rmse:.0f}"}, refresh=False)
                     if epochs_no_improve >= tuned_config.patience:
                         break
                 fold_scores.append(best_val)
@@ -245,7 +244,6 @@ def train_final_model(
             else:
                 epochs_no_improve += 1
             progress.update(1)
-            progress.set_postfix({"loss": f"{epoch_loss:.4f}"}, refresh=False)
             if epochs_no_improve >= config.patience:
                 break
         progress.total = max(progress.n, 1)

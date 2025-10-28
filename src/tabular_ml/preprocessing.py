@@ -93,7 +93,8 @@ def clean_dataframe(df: pd.DataFrame, config: TrainingConfig, apply_target_clipp
             cleaned = cleaned[cleaned[config.target_column] <= upper_bound].reset_index(drop=True)
             removed = original_rows - len(cleaned)
             if removed > 0:
-                print(f"Removed {removed} rows exceeding target upper bound {upper_bound:.0f}.")
+                pass
+                # print(f"Removed {removed} rows exceeding target upper bound {upper_bound:.0f}.")
 
     if "mileage" in cleaned.columns:
         cleaned["mileage"] = _extract_numeric(cleaned["mileage"])

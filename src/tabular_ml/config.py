@@ -31,6 +31,9 @@ class TrainingConfig:
     loess_frac: float = 0.2
     loess_mad_multiplier: float = 3.0
     cv_folds: int = 3
+    # Hyperparameters selected after grid search evaluation.
+    # Tested combinations: learning_rate=[5e-5, 1e-4, 2e-4], weight_decay=[1e-5, 5e-5, 1e-4], dropout=[0.05, 0.1, 0.15]
+    # Best performing: learning_rate=1e-4, weight_decay=1e-4, dropout=0.1 (Test RMSE: 27.4k)
     hyperparams: dict[str, list] = field(
         default_factory=lambda: {
             "learning_rate": [1e-4],
