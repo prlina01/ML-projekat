@@ -80,13 +80,21 @@ def main(argv: Sequence[str] | None = None) -> None:
         raw_df = raw_df.sample(sample_size, random_state=config.random_state).reset_index(drop=True)
         print(f"Fast mode: sampled {sample_size} rows for training.")
 
-    processed_df = preprocess_full_dataset(raw_df, config)
-    print(f"Shape after preprocessing & outlier handling: {processed_df.shape}")
+    train_df, test_df = train_test_split(config, raw_df)
+    print(f"Training rows (raw): {len(train_df)} | Test rows (raw): {len(test_df)}")
 
-    train_df, test_df = train_test_split(config, processed_df)
-    print(f"Training rows: {len(train_df)} | Test rows: {len(test_df)}")
-
+    train_df = preprocess_full_dataset(train_df, config)
+    print(f"Training rows after preprocessing: {len(train_df)}")
+    
+    # Build artifacts from training data (including seats mode)
     artifacts: PreprocessingArtifacts = build_artifacts(train_df, config)
+    
+    # Apply ONLY feature cleaning/engineering to test (no outlier removal/target clipping)
+    # Use training set's seats mode for consistency
+    from tabular_ml.preprocessing import clean_dataframe, feature_engineering
+    test_df = clean_dataframe(test_df, config, apply_target_clipping=False, seats_mode=artifacts.seats_mode)
+    test_df = feature_engineering(test_df)
+
     model_inputs: ModelInputs = prepare_model_inputs(train_df, test_df, artifacts, config)
     categorical_cardinalities = get_categorical_cardinalities(artifacts)
 

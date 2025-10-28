@@ -23,6 +23,7 @@ class PreprocessingArtifacts:
     scaler: RobustScaler
     category_maps: Dict[str, Dict[str, int]]
     numeric_imputers: Dict[str, float]
+    seats_mode: float | None = None
 
 
 @dataclass
@@ -75,23 +76,24 @@ def _parse_torque(raw_value: str | float | int) -> Tuple[float, float]:
     return (torque_nm, rpm)
 
 
-def clean_dataframe(df: pd.DataFrame, config: TrainingConfig) -> pd.DataFrame:
+def clean_dataframe(df: pd.DataFrame, config: TrainingConfig, apply_target_clipping: bool = True, seats_mode: float | None = None) -> pd.DataFrame:
     cleaned = df.copy()
     cleaned = cleaned.drop_duplicates().reset_index(drop=True)
     cleaned = cleaned.dropna(subset=[config.target_column])
 
-    upper_bound: float | None = None
-    if config.target_clip_quantile is not None:
-        quantile_value = float(cleaned[config.target_column].quantile(config.target_clip_quantile))
-        upper_bound = quantile_value
-    if config.target_clip_upper is not None:
-        upper_bound = min(upper_bound, config.target_clip_upper) if upper_bound is not None else float(config.target_clip_upper)
-    if upper_bound is not None:
-        original_rows = len(cleaned)
-        cleaned = cleaned[cleaned[config.target_column] <= upper_bound].reset_index(drop=True)
-        removed = original_rows - len(cleaned)
-        if removed > 0:
-            print(f"Removed {removed} rows exceeding target upper bound {upper_bound:.0f}.")
+    if apply_target_clipping:
+        upper_bound: float | None = None
+        if config.target_clip_quantile is not None:
+            quantile_value = float(cleaned[config.target_column].quantile(config.target_clip_quantile))
+            upper_bound = quantile_value
+        if config.target_clip_upper is not None:
+            upper_bound = min(upper_bound, config.target_clip_upper) if upper_bound is not None else float(config.target_clip_upper)
+        if upper_bound is not None:
+            original_rows = len(cleaned)
+            cleaned = cleaned[cleaned[config.target_column] <= upper_bound].reset_index(drop=True)
+            removed = original_rows - len(cleaned)
+            if removed > 0:
+                print(f"Removed {removed} rows exceeding target upper bound {upper_bound:.0f}.")
 
     if "mileage" in cleaned.columns:
         cleaned["mileage"] = _extract_numeric(cleaned["mileage"])
@@ -106,7 +108,10 @@ def clean_dataframe(df: pd.DataFrame, config: TrainingConfig) -> pd.DataFrame:
         cleaned["torque_rpm"] = torque_df["torque_rpm"].astype(float)
         cleaned["torque"] = _extract_numeric(cleaned["torque"])
     if "seats" in cleaned.columns:
-        cleaned["seats"] = cleaned["seats"].fillna(cleaned["seats"].mode(dropna=True).iloc[0])
+        if seats_mode is not None:
+            cleaned["seats"] = cleaned["seats"].fillna(seats_mode)
+        else:
+            cleaned["seats"] = cleaned["seats"].fillna(cleaned["seats"].mode(dropna=True).iloc[0])
 
     numeric_cols = cleaned.select_dtypes(include=[np.number]).columns.tolist()
     for col in numeric_cols:
@@ -229,12 +234,20 @@ def build_artifacts(train_df: pd.DataFrame, config: TrainingConfig) -> Preproces
     train_numeric = train_df[numeric_cols].fillna(pd.Series(numeric_imputers))
     scaler = fit_scaler(train_numeric)
     category_maps = encode_categories(train_df, categorical_cols)
+    
+    seats_mode: float | None = None
+    if "seats" in train_df.columns:
+        mode_series = train_df["seats"].mode(dropna=True)
+        if len(mode_series) > 0:
+            seats_mode = float(mode_series.iloc[0])
+    
     return PreprocessingArtifacts(
         numeric_columns=numeric_cols,
         categorical_columns=categorical_cols,
         scaler=scaler,
         category_maps=category_maps,
         numeric_imputers=numeric_imputers,
+        seats_mode=seats_mode,
     )
 
 

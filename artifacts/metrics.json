@@ -1,10 +1,10 @@
 {
   "dataset_path": "Car details v3.xls",
-  "train_rows": 5335,
-  "test_rows": 1334,
-  "final_train_loss": 0.10666278998057048,
-  "test_rmse": 15489.6181640625,
-  "cv_rmse": 17859.179036458332,
+  "train_rows": 5476,
+  "test_rows": 1505,
+  "final_train_loss": 0.11236972613043564,
+  "test_rmse": 27387.68359375,
+  "cv_rmse": 16860.039713541668,
   "best_hyperparameters": {
     "dropout": 0.1,
     "learning_rate": 0.0001,
